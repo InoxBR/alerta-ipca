@@ -1,0 +1,6 @@
+alerta-ipca
+├── .github
+│   └── workflows
+│       └── ipca-alerta.yml
+├── fetch_ipca.py
+└── requirements.txt
