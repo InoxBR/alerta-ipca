@@ -9,6 +9,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import requests
+from playwright.sync_api import sync_playwright
 
 CSV_URL = "https://www.tesourodireto.com.br/documents/d/guest/rendimento-investir-csv?download=true"
 TZ = ZoneInfo("America/Sao_Paulo")
@@ -46,24 +47,30 @@ def agora_sp_iso() -> str:
     return agora_sp().isoformat()
 
 def baixar_csv() -> str:
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/123.0.0.0 Safari/537.36"
-        ),
-        "Accept": "text/csv,application/csv,text/plain,*/*",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Referer": "https://www.tesourodireto.com.br/",
-        "Origin": "https://www.tesourodireto.com.br",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-    }
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/123.0.0.0 Safari/537.36"
+            )
+        )
 
-    session = requests.Session()
-    r = session.get(CSV_URL, headers=headers, timeout=30)
-    r.raise_for_status()
-    return r.text
+        response = page.goto(CSV_URL, wait_until="domcontentloaded", timeout=60000)
+        if response is None:
+            browser.close()
+            raise ValueError("Não houve resposta ao abrir o CSV")
+
+        status = response.status
+        texto = response.text()
+
+        browser.close()
+
+        if status >= 400:
+            raise ValueError(f"Falha HTTP {status} ao abrir o CSV")
+
+        return texto
 
 def parsear_alvos(csv_texto: str) -> dict[str, float]:
     leitor = csv.DictReader(io.StringIO(csv_texto), delimiter=";")
