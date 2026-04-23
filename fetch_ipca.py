@@ -46,7 +46,22 @@ def agora_sp_iso() -> str:
     return agora_sp().isoformat()
 
 def baixar_csv() -> str:
-    r = requests.get(CSV_URL, timeout=30)
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/123.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/csv,application/csv,text/plain,*/*",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://www.tesourodireto.com.br/",
+        "Origin": "https://www.tesourodireto.com.br",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+    }
+
+    session = requests.Session()
+    r = session.get(CSV_URL, headers=headers, timeout=30)
     r.raise_for_status()
     return r.text
 
