@@ -204,6 +204,43 @@ def salvar_json(payload: dict) -> None:
 
 def salvar_index(payload: dict) -> None:
     os.makedirs(OUT_DIR, exist_ok=True)
+
+    historico_html = ""
+    if os.path.exists(HIST_PATH):
+        with open(HIST_PATH, "r", encoding="utf-8") as f:
+            linhas = list(csv.DictReader(f))
+
+        if linhas:
+            linhas_ordenadas = list(reversed(linhas[-20:]))  # mostra as 20 mais recentes
+            linhas_tabela = ""
+            for linha in linhas_ordenadas:
+                linhas_tabela += f"""
+                <tr>
+                  <td>{linha['data']}</td>
+                  <td>{linha['ipca_2032']}</td>
+                  <td>{linha['ipca_2040']}</td>
+                  <td>{linha['ipca_2045_js']}</td>
+                </tr>
+                """
+
+            historico_html = f"""
+            <h2>Histórico recente</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>IPCA+ 2032</th>
+                  <th>IPCA+ 2040</th>
+                  <th>IPCA+ 2045 JS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {linhas_tabela}
+              </tbody>
+            </table>
+            <p><a href="historico.csv">Baixar histórico CSV</a></p>
+            """
+
     html = f"""<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -211,8 +248,11 @@ def salvar_index(payload: dict) -> None:
   <title>Alerta IPCA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {{ font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 16px; }}
     pre {{ background: #f5f5f5; padding: 16px; border-radius: 8px; overflow: auto; }}
+    table {{ border-collapse: collapse; width: 100%; margin-top: 16px; }}
+    th, td {{ border: 1px solid #ddd; padding: 8px; text-align: center; }}
+    th {{ background: #f0f0f0; }}
   </style>
 </head>
 <body>
@@ -221,7 +261,11 @@ def salvar_index(payload: dict) -> None:
   <p><strong>Mensagem:</strong> {payload.get("mensagem")}</p>
   <p><strong>Coletado em:</strong> {payload.get("coletado_em")}</p>
   <p><a href="ipca_hoje.json">Abrir JSON</a></p>
+
+  <h2>Leitura do dia</h2>
   <pre>{json.dumps(payload, ensure_ascii=False, indent=2)}</pre>
+
+  {historico_html}
 </body>
 </html>
 """
