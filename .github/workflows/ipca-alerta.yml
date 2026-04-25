@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -37,6 +39,18 @@ jobs:
 
       - name: Coletar dados
         run: python fetch_ipca.py
+
+      - name: Salvar histórico no repositório
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/historico.csv
+          if git diff --cached --quiet; then
+            echo "Sem mudanças no histórico"
+          else
+            git commit -m "Atualiza histórico IPCA"
+            git push origin main
+          fi
 
       - name: Configurar Pages
         uses: actions/configure-pages@v5
