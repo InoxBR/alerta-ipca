@@ -62,12 +62,19 @@ def baixar_csv() -> str:
 
         try:
             with page.expect_download(timeout=60000) as download_info:
-                page.goto(CSV_URL, wait_until="domcontentloaded", timeout=60000)
+                try:
+                    page.goto(CSV_URL, wait_until="commit", timeout=60000)
+                except Exception as e:
+                    # Em links que disparam download, o Chromium pode abortar a navegação.
+                    # Se o download estiver sendo capturado, isso não deve ser tratado como erro fatal.
+                    if "ERR_ABORTED" not in str(e):
+                        raise
 
             download = download_info.value
             caminho = download.path()
+
             if not caminho:
-                raise ValueError("Download iniciado, mas sem arquivo disponível")
+                raise ValueError("Download iniciado, mas o arquivo não ficou disponível")
 
             with open(caminho, "r", encoding="utf-8-sig") as f:
                 texto = f.read()
