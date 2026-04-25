@@ -49,28 +49,35 @@ def agora_sp_iso() -> str:
 def baixar_csv() -> str:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page(
+        context = browser.new_context(
+            accept_downloads=True,
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/123.0.0.0 Safari/537.36"
-            )
+            ),
+            locale="pt-BR",
         )
+        page = context.new_page()
 
-        response = page.goto(CSV_URL, wait_until="domcontentloaded", timeout=60000)
-        if response is None:
+        try:
+            with page.expect_download(timeout=60000) as download_info:
+                page.goto(CSV_URL, wait_until="domcontentloaded", timeout=60000)
+
+            download = download_info.value
+            caminho = download.path()
+            if not caminho:
+                raise ValueError("Download iniciado, mas sem arquivo disponível")
+
+            with open(caminho, "r", encoding="utf-8-sig") as f:
+                texto = f.read()
+
             browser.close()
-            raise ValueError("Não houve resposta ao abrir o CSV")
+            return texto
 
-        status = response.status
-        texto = response.text()
-
-        browser.close()
-
-        if status >= 400:
-            raise ValueError(f"Falha HTTP {status} ao abrir o CSV")
-
-        return texto
+        except Exception:
+            browser.close()
+            raise
 
 def parsear_alvos(csv_texto: str) -> dict[str, float]:
     leitor = csv.DictReader(io.StringIO(csv_texto), delimiter=";")
